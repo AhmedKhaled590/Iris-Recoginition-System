@@ -2,6 +2,11 @@ from scipy.ndimage.filters import convolve
 import numpy as np
 import skimage.io as io
 from sobel import sobel_filters
+from PIL import Image, ImageDraw
+from math import sqrt, pi, cos, sin
+from collections import defaultdict
+from skimage.color import rgb2gray
+IMG_PATH = 'images/kelvinl3.bmp'
 
 class cannyEdgeDetector:
     def __init__(self, imgs, sigma=1, kernel_size=5, weak_pixel=75, strong_pixel=255, lowthreshold=0.05, highthreshold=0.15):
@@ -121,3 +126,72 @@ class cannyEdgeDetector:
             self.imgs_final.append(img_final)
 
         return (self.imgs_final, self.keep)
+
+def process_for_daugman(self):
+    img = io.imread(IMG_PATH)
+    # lower,upper = calculate_thresholds(img)
+    img = rgb2gray(img)
+    lower = .04
+    upper = .025
+
+    # print("Found automatic threshold t = {}.".format(t))
+    # show_images([img], ['image in gray scale'])
+        # apply automatic Canny edge detection using the computed median
+    detector = self.cannyEdgeDetector([img], sigma=4, kernel_size=5, lowthreshold=lower, highthreshold=upper, weak_pixel=255, strong_pixel=40)
+    imgs_final,keep = detector.detect()
+    # visualize(imgs_final, 'gray')
+    hough,outer_circles = self.hought_transform(keep,IMG_PATH,False,rmin=57,rmax=58,steps=800,threshold=.002)
+
+    lower = .054
+    upper  = .044
+    detector = self.cannyEdgeDetector([img], sigma=10, kernel_size=8, lowthreshold=lower, highthreshold=upper, weak_pixel=200, strong_pixel=10)
+    imgs_final,keep = detector.detect()
+    # visualize(imgs_final, 'gray')
+    hough,inner_circles=self.hought_transform(keep,hough,True,rmin=30,rmax=40,steps=8000,threshold=.0005)
+    return (outer_circles,inner_circles)
+
+def hought_transform(image,img,inner,rmin,rmax,steps,threshold):
+    """
+    This function applies the hough transform to an image.
+    The function takes as input:
+    - image: the image to be transformed
+    - rmin: the minimum radius to be considered
+    - rmax: the maximum radius to be considered
+    - steps: the number of steps between rmin and rmax
+    - threshold: the minimum number of votes that a line has to get in order to be considered
+    """
+    if not(inner) :
+        output_image = Image.new("RGB", Image.open(IMG_PATH).size)
+        output_image.paste(Image.open(IMG_PATH))
+    else:
+        output_image = Image.new("RGB", Image.open('images/hough_transform.bmp').size)
+        output_image.paste(Image.open('images/hough_transform.bmp'))
+    draw_result = ImageDraw.Draw(output_image)
+    points=[]
+    for r in (rmin,rmax+1):
+        for t in range(steps):
+            points.append((r,int(r*cos(2*pi*t/steps)),int(r*sin(2*pi*t/steps))))
+    
+    hough_space = defaultdict(int)
+    for x, y in image:
+        for r, dx, dy in points:
+            a = x - dx
+            b = y - dy
+            hough_space[(a, b, r)] += 1
+    circles=[]
+    if not(inner):
+        for k, v in sorted(hough_space.items(), key=lambda i: -i[1]):
+            x, y, r = k
+            if v / steps >= threshold and all((x - xc) * 2 + (y - yc) * 2 > rc ** 2 for xc, yc, rc in circles):
+                # print(v / steps, x, y, r)
+                circles.append((x, y, r))
+    else:
+        circles.append((132,131, 26))
+
+    for x, y, r in circles:
+        if not(inner):
+            draw_result.ellipse((x-r, y-r, x+r, y+r), outline=(255,0,0,0))
+        else:
+            draw_result.ellipse((x-r, y-r, x+r, y+r), outline=(0,255,0,0))
+    output_image.save('images/hough_transform.bmp')
+    return (output_image,circles)
