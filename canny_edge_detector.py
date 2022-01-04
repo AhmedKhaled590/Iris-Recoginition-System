@@ -7,6 +7,7 @@ from math import sqrt, pi, cos, sin
 from collections import defaultdict
 from skimage.color import rgb2gray
 from scipy import signal
+from matplotlib import pyplot as plt
 
 class cannyEdgeDetector:
     def __init__(self, imgs, sigma=1, kernel_size=5, weak_pixel=75, strong_pixel=255, lowthreshold=0.05, highthreshold=0.15):
@@ -144,7 +145,7 @@ def searchInnerBound(img):
         inner_r	- Radius of the inner circle.
     """
 
-    # Integro-Differential operator coarse (jump-level precision)
+    # Integro-Differential operator coarse (jump-level precision) to find first impression
     Y = img.shape[0]
     X = img.shape[1]
     sect = X/4 		# Width of the external margin for which search is excluded
@@ -153,8 +154,8 @@ def searchInnerBound(img):
     jump = 4 		# Precision of the coarse search, in pixels
 
     # Hough Space (y,x,r)
-    sz = np.array([np.floor((Y-2*sect)/jump),
-                    np.floor((X-2*sect)/jump),
+    sz = np.array([np.floor((Y)/jump),
+                    np.floor((X)/jump),
                     np.floor((maxrad-minrad)/jump)]).astype(int)
     # Resolution of the circular integration
     integrationprecision = 1
@@ -164,10 +165,9 @@ def searchInnerBound(img):
                           np.arange(sz[0]),
                           np.arange(sz[2]))
     
-    y = sect + y*jump    #Y-points to be checked how many circles passes by them
-    x = sect + x*jump   #X-Points to be checked how many circles passes by them
-    r = minrad + r*jump #range of radiis
-    #Formation of hough space and return cummulative sum of votes
+    y = y*jump    
+    x = x*jump   
+    r = minrad + r*jump 
     hs = ContourIntegralCircular(img, y, x, r, angs)
 
     # Hough Space Partial Derivative R
@@ -179,17 +179,17 @@ def searchInnerBound(img):
     indmax = np.argmax(hspdrs.ravel())
     y,x,r = np.unravel_index(indmax, hspdrs.shape)
 
-    inner_y = sect + y*jump
-    inner_x = sect + x*jump
+    inner_y =  y*jump
+    inner_x =  x*jump
     inner_r = minrad + (r-1)*jump
 
 
     # Integro-Differential operator fine (pixel-level precision)
     integrationprecision = 0.1 		# Resolution of the circular integration
     angs = np.arange(0, 2*np.pi, integrationprecision)
-    x, y, r = np.meshgrid(np.arange(jump*2),
-                          np.arange(jump*2),
-                          np.arange(jump*2))
+    x, y, r = np.meshgrid(np.arange(inner_x),
+                          np.arange(inner_y),
+                          np.arange(inner_r))
     y = inner_y - jump + y
     x = inner_x - jump + x
     r = inner_r - jump + r
@@ -204,7 +204,7 @@ def searchInnerBound(img):
     hspdrs = signal.fftconvolve(hspdr, np.ones([sm,sm,sm]), mode="same")
     indmax = np.argmax(hspdrs.ravel())
     y,x,r = np.unravel_index(indmax, hspdrs.shape)
-
+    
     inner_y = inner_y - jump + y
     inner_x = inner_x - jump + x
     inner_r = inner_r - jump + r - 1
@@ -289,12 +289,12 @@ def ContourIntegralCircular(imagen, y_0, x_0, r, angs):
         hs      - Integral result.
     """
     # Get y, x
-    print(len(angs), r.shape[0], r.shape[1], r.shape[2])
+    # print(len(angs), r.shape[0], r.shape[1], r.shape[2])
     y = np.zeros([len(angs), r.shape[0], r.shape[1], r.shape[2]], dtype=int)
     x = np.zeros([len(angs), r.shape[0], r.shape[1], r.shape[2]], dtype=int) 
     for i in range(len(angs)):
         ang = angs[i]
-        y[i, :, :, :] = np.round(y_0 - np.cos(ang) * r).astype(int)
+        y[i, :, :, :] = np.round(y_0 + np.cos(ang) * r).astype(int)
         x[i, :, :, :] = np.round(x_0 + np.sin(ang) * r).astype(int)
     
     # Adapt y
@@ -311,7 +311,6 @@ def ContourIntegralCircular(imagen, y_0, x_0, r, angs):
 
 
     hs = imagen[y, x]
-    print("dsf ",hs.ndim)
     hs = np.sum(hs, axis=0)
     return hs.astype(float)
 
@@ -347,11 +346,35 @@ def process_for_daugman(self,IMG_PATH):
     o_y,o_x,o_r = self.searchOuterBound(img, i_y, i_x, i_r)
     draw_result.ellipse((o_x-o_r, o_y-o_r, o_x+o_r, o_y+o_r), outline=(0,255,0))
     output_image.save('images/ss.bmp')
+    plt.imshow(output_image)
+    plt.show()
     outer_circle=[]
     inner_circle=[]
     outer_circle.append((o_x,o_y,o_r))
     inner_circle.append((i_x,i_y,i_r))
-    return (outer_circle,inner_circle)
+    rowp = np.round(i_y).astype(int)
+    colp = np.round(i_x).astype(int)
+    rp = np.round(i_r).astype(int)
+    row = np.round(o_y).astype(int)
+    col = np.round(o_x).astype(int)
+    r = np.round(o_r).astype(int)
+
+    # Find top and bottom eyelid
+    imsz = img.shape
+    irl = np.round(row - r).astype(int)
+    iru = np.round(row + r).astype(int)
+    icl = np.round(col - r).astype(int)
+    icu = np.round(col + r).astype(int)
+    if irl < 0:
+        irl = 0
+    if icl < 0:
+        icl = 0
+    if iru >= imsz[0]:
+        iru = imsz[0] - 1
+    if icu >= imsz[1]:
+        icu = imsz[1] - 1
+    imageiris = img[irl: iru + 1, icl: icu + 1]
+    return (outer_circle,inner_circle,output_image)
 
 def hought_transform(image,img,inner,rmin,rmax,steps,threshold):
     """
