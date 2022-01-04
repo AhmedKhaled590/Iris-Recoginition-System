@@ -361,10 +361,10 @@ def process_for_daugman(self,IMG_PATH):
 
     # Find top and bottom eyelid
     imsz = img.shape
-    irl = np.round(row - r).astype(int)
-    iru = np.round(row + r).astype(int)
-    icl = np.round(col - r).astype(int)
-    icu = np.round(col + r).astype(int)
+    irl = np.round(row - r+4).astype(int)
+    iru = np.round(row + r-4).astype(int)
+    icl = np.round(col - r+4).astype(int)
+    icu = np.round(col + r-4).astype(int)
     if irl < 0:
         irl = 0
     if icl < 0:
@@ -373,7 +373,7 @@ def process_for_daugman(self,IMG_PATH):
         iru = imsz[0] - 1
     if icu >= imsz[1]:
         icu = imsz[1] - 1
-    imageiris = img[irl: iru + 1, icl: icu + 1]
+    imageiris = img[irl+15: iru + 1, icl: icu + 1]
     return (outer_circle,inner_circle,output_image)
 
 def hought_transform(image,img,inner,rmin,rmax,steps,threshold):
