@@ -7,7 +7,6 @@ from math import sqrt, pi, cos, sin
 from collections import defaultdict
 from skimage.color import rgb2gray
 from scipy import signal
-IMG_PATH = 'images/kelvinl3.bmp'
 
 class cannyEdgeDetector:
     def __init__(self, imgs, sigma=1, kernel_size=5, weak_pixel=75, strong_pixel=255, lowthreshold=0.05, highthreshold=0.15):
@@ -154,12 +153,13 @@ def searchInnerBound(img):
     jump = 4 		# Precision of the coarse search, in pixels
 
     # Hough Space (y,x,r)
-    sz = np.array([np.floor(Y),
-                    np.floor(X),
-                    np.floor((maxrad-minrad))]).astype(int)
+    sz = np.array([np.floor((Y-2*sect)/jump),
+                    np.floor((X-2*sect)/jump),
+                    np.floor((maxrad-minrad)/jump)]).astype(int)
     # Resolution of the circular integration
     integrationprecision = 1
-    angs = np.arange(0, 2*np.pi, integrationprecision) 
+    angs = np.arange(0, 2*np.pi, integrationprecision) # angels from 0 to 2Pi
+    # c 
     x, y, r = np.meshgrid(np.arange(sz[1]),
                           np.arange(sz[0]),
                           np.arange(sz[2]))
