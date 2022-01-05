@@ -49,26 +49,21 @@ def log_gabor (img,min_wave_len,sigma):
 
 
 
-def normalization_to_template (arr_in_polar,noise_arr,min_wave_len,sigma):
+def normalization_to_template (arr_in_polar,min_wave_len,sigma):
         # print("inside template",arr_in_polar.shape[0])
         arr_in_polar = cv.cvtColor(arr_in_polar, cv.COLOR_BGR2GRAY)
         filter_bank=log_gabor(arr_in_polar,min_wave_len,sigma)
         len=filter_bank.shape[1]
         temp = np.zeros([arr_in_polar.shape[0], 2 * len])
         # h = np.arange(arr_in_polar.shape[0])
-        mask = np.zeros(temp.shape)
-
         eleFilt = filter_bank[:, :]
         H1 = np.real(eleFilt) > 0
         H2 = np.imag(eleFilt) > 0
-        H3 = np.abs(eleFilt) < 0.0001
         for i in range(len):
                 ja = 2 * i
                 temp[:, ja] = H1[:, i]
                 temp[:, ja + 1] = H2[:, i]
-                mask[:, ja] = noise_arr[:, i] | H3[:, i]
-                mask[:, ja + 1] = noise_arr[:, i] | H3[:, i]
-        return temp,mask
+        return temp
 
 
 
