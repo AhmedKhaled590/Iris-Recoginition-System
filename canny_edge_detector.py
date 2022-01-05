@@ -374,7 +374,7 @@ def process_for_daugman(self,IMG_PATH):
     if icu >= imsz[1]:
         icu = imsz[1] - 1
     imageiris = img[irl: iru + 1, icl: icu + 1]
-    return (outer_circle,inner_circle,output_image)
+    return (outer_circle,inner_circle,imageiris)
 
 def hought_transform(image,img,inner,rmin,rmax,steps,threshold):
     """
