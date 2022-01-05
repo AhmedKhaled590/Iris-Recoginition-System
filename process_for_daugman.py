@@ -9,18 +9,7 @@ from matplotlib import pyplot as plt
 
 
 def searchInnerBound(img):
-    """
-    Description:
-        Search for the inner boundary of the iris.
-    Input:
-        img		- The input iris image.
-    Output:
-        inner_y	- y-coordinate of the inner circle centre.
-        inner_x	- x-coordinate of the inner circle centre.
-        inner_r	- Radius of the inner circle.
-    """
 
-    # Integro-Differential operator coarse Stage to find first impression
     Y = img.shape[0]
     X = img.shape[1]
     sect = X/4
@@ -86,19 +75,7 @@ def searchInnerBound(img):
 
 # ------------------------------------------------------------------------------
 def searchOuterBound(img, inner_y, inner_x, inner_r):
-    """
-    Description:
-        Search for the outer boundary of the iris.
-    Input:
-        img		- The input iris image.
-        inner_y	- The y-coordinate of the inner circle centre.
-        inner_x	- The x-coordinate of the inner circle centre.
-        inner_r	- The radius of the inner circle.
-    Output:
-        outer_y	- y-coordinate of the outer circle centre.
-        outer_x	- x-coordinate of the outer circle centre.
-        outer_r	- Radius of the outer circle.
-    """
+   
     maxdispl = np.round(inner_r*0.15).astype(int)
 
     minrad = np.round(inner_r/0.8).astype(int)
@@ -142,18 +119,7 @@ def searchOuterBound(img, inner_y, inner_x, inner_r):
 
 # ------------------------------------------------------------------------------
 def ContourIntegralCircular(imagen, y_0, x_0, r, angs):
-    """
-    Description:
-        Performs contour (circular) integral.
-    Input:
-        imagen  - The input iris image.
-        y_0     - The y-coordinate of the circle centre.
-        x_0     - The x-coordinate of the circle centre.
-        r       - The radius of the circle.
-        angs    - The region of the circle considering clockwise 0-2pi.
-    Output:
-        hs      - Integral result.
-    """
+  
     # Get y, x
     y = np.zeros([len(angs), r.shape[0], r.shape[1], r.shape[2]], dtype=int)
     x = np.zeros([len(angs), r.shape[0], r.shape[1], r.shape[2]], dtype=int)
