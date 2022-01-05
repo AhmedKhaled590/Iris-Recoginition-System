@@ -1,77 +1,95 @@
 import numpy as np
 import cv2 as cv
 import matplotlib as mpl
-def log_gabor (img,min_wave_len,sigma):
-    #get width and height of image
-    rows,col=img.shape 
-    # print('rows,col: ',rows,col)
-    #intiate gabor filter as an array with the # of columns 
-    log_gabor=np.zeros(col)
-    # print('log gabor: ',log_gabor)
-    filter_bank = np.zeros([rows, col], dtype=complex)
-    # print('filter_bank: ',filter_bank)
-    radius=np.arange(col/2 + 1) / (col/2) / 2
-    # print('radius: ',radius)
-    radius[0]=0
-    # print('radius: ',radius)
-    wave_len=min_wave_len
-    fo=1/wave_len
-    log_gabor[0 : int(col/2) + 1] = np.exp((-(np.log(radius/fo))**2) / (2 * np.log(sigma)**2))
-    # print('log_gabor: ',log_gabor)
-    log_gabor[0]=0
+def normalization_to_template(polar_array, noise_array, minWaveLength, sigmaOnf):
+	"""
+	Description:
+		Generate iris template and noise mask from the normalised iris region.
+	Input:
+		polar_array		- Normalised iris region.
+		noise_array		- Normalised noise region.
+		minWaveLength	- Base wavelength.
+		mult			- Multicative factor between each filter.
+		sigmaOnf		- Bandwidth parameter.
+	Output:
+		template		- The binary iris biometric template.
+		mask			- The binary iris noise mask.
+	"""
+	# Convolve normalised region with Gabor filters
+	filterbank = gaborconvolve(polar_array, minWaveLength, sigmaOnf)
 
-    # Assume this the image 
-    # *****************
-    # *****************
-    # *****************
-    # *****************
-    # *****************
-    # *****************
+	length = polar_array.shape[1]
+	template = np.zeros([polar_array.shape[0], 2 * length])
+	h = np.arange(polar_array.shape[0])
 
-    # and the filter is #################
-    # so what we do is just move the filter row by row
+	# Create the iris template
+	mask = np.zeros(template.shape)
+	eleFilt = filterbank[:, :]
 
-    for r in range(rows):
-            # print('img inside for',img.shape)
-            signal = img[r, 0:col]
-            # print('signal: ',signal)
-            # log_gabor is a pass filter and we want to modulate
-            #  the signal with it so we convert signal to frequency domain
-            #  as convolution is in spatial domain is multiplication in 
-            #  the frequency domain
-            fourier_transform_of_signal = np.fft.fft(signal)
-            # print('fft signal',fourier_transform_of_signal)
-            #we use inverse fourier transform to get the 
-            # filtered signal in spatial domain
-            filter_bank[r , :] = np.fft.ifft(fourier_transform_of_signal * log_gabor)
-            # print('filter bank: ',filter_bank)
-    return filter_bank
+	# Phase quantization
+	H1 = np.real(eleFilt) > 0
+	H2 = np.imag(eleFilt) > 0
 
+	# If amplitude is close to zero then phase data is not useful,
+	# so mark off in the noise mask
+	H3 = np.abs(eleFilt) < 0.0001
+	for i in range(length):
+		ja = 2 * i
 
+		# Construct the biometric template
+		template[:, ja] = H1[:, i]
+		template[:, ja + 1] = H2[:, i]
 
-def normalization_to_template (arr_in_polar,noise_arr,min_wave_len,sigma):
-        # print("inside template",arr_in_polar.shape[0])
-        arr_in_polar = cv.cvtColor(arr_in_polar, cv.COLOR_BGR2GRAY)
-        filter_bank=log_gabor(arr_in_polar,min_wave_len,sigma)
-        len=filter_bank.shape[1]
-        temp = np.zeros([arr_in_polar.shape[0], 2 * len])
-        # h = np.arange(arr_in_polar.shape[0])
-        mask = np.zeros(temp.shape)
+		# Create noise mask
+		mask[:, ja] = noise_array[:, i] | H3[:, i]
+		mask[:, ja + 1] = noise_array[:, i] | H3[:, i]
 
-        eleFilt = filter_bank[:, :]
-        H1 = np.real(eleFilt) > 0
-        H2 = np.imag(eleFilt) > 0
-        H3 = np.abs(eleFilt) < 0.0001
-        for i in range(len):
-                ja = 2 * i
-                temp[:, ja] = H1[:, i]
-                temp[:, ja + 1] = H2[:, i]
-                mask[:, ja] = noise_arr[:, i] | H3[:, i]
-                mask[:, ja + 1] = noise_arr[:, i] | H3[:, i]
-        return temp,mask
+	# Return
+	return template, mask
 
 
+#------------------------------------------------------------------------------
+def gaborconvolve(im, minWaveLength, sigmaOnf):
+	"""
+	Description:
+		Convolve each row of an image with 1D log-Gabor filters.
+	Input:
+		im   			- The image to be convolved.
+		minWaveLength   - Wavelength of the basis filter.
+		mult   			- Multiplicative factor between each filter.
+		sigmaOnf   		- Ratio of the standard deviation of the
+						  Gaussian describing the log Gabor filter's transfer
+						  function in the frequency domain to the filter center
+						  frequency.
+	Output:
+		filterbank		- The 1D cell array of complex valued convolution
+						  resultsCircle coordinates.
+	"""
+	# Pre-allocate
+	rows, ndata = im.shape					# Size
+	logGabor = np.zeros(ndata)				# Log-Gabor
+	filterbank = np.zeros([rows, ndata], dtype=complex)
 
+	# Frequency values 0 - 0.5
+	radius = np.arange(ndata/2 + 1) / (ndata/2) / 2
+	radius[0] = 1
+
+	# Initialize filter wavelength
+	wavelength = minWaveLength
+
+	# Calculate the radial filter component
+	fo = 1 / wavelength 		# Centre frequency of filter
+	logGabor[0 : int(ndata/2) + 1] = np.exp((-(np.log(radius/fo))**2) / (2 * np.log(sigmaOnf)**2))
+	logGabor[0] = 0
+
+	# For each row of the input image, do the convolution
+	for r in range(rows):
+		signal = im[r, 0:ndata]
+		imagefft = np.fft.fft(signal)
+		filterbank[r , :] = np.fft.ifft(imagefft * logGabor)
+
+	# Return
+	return filterbank
 
 
         

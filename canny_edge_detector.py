@@ -1,5 +1,6 @@
 from scipy.ndimage.filters import convolve
 import numpy as np
+from skimage.color.colorconv import gray2rgb
 import skimage.io as io
 from sobel import sobel_filters
 from PIL import Image, ImageDraw
@@ -135,10 +136,8 @@ def searchInnerBound(img):
     """
     Description:
         Search for the inner boundary of the iris.
-
     Input:
         img		- The input iris image.
-
     Output:
         inner_y	- y-coordinate of the inner circle centre.
         inner_x	- x-coordinate of the inner circle centre.
@@ -217,13 +216,11 @@ def searchOuterBound(img, inner_y, inner_x, inner_r):
     """
     Description:
         Search for the outer boundary of the iris.
-
     Input:
         img		- The input iris image.
         inner_y	- The y-coordinate of the inner circle centre.
         inner_x	- The x-coordinate of the inner circle centre.
         inner_r	- The radius of the inner circle.
-
     Output:
         outer_y	- y-coordinate of the outer circle centre.
         outer_x	- x-coordinate of the outer circle centre.
@@ -277,14 +274,12 @@ def ContourIntegralCircular(imagen, y_0, x_0, r, angs):
     """
     Description:
         Performs contour (circular) integral.
-
     Input:
         imagen  - The input iris image.
         y_0     - The y-coordinate of the circle centre.
         x_0     - The x-coordinate of the circle centre.
         r       - The radius of the circle.
         angs    - The region of the circle considering clockwise 0-2pi.
-
     Output:
         hs      - Integral result.
     """
@@ -374,7 +369,7 @@ def process_for_daugman(self,IMG_PATH):
     if icu >= imsz[1]:
         icu = imsz[1] - 1
     imageiris = img[irl: iru + 1, icl: icu + 1]
-    return (outer_circle,inner_circle,output_image)
+    return (outer_circle,inner_circle,imageiris)
 
 def hought_transform(image,img,inner,rmin,rmax,steps,threshold):
     """
